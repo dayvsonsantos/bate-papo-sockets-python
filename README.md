@@ -28,7 +28,8 @@ O cliente pode mandar tanto mensagens públicas quanto mensagens privadas. Além
 
 ## Comandos que podem ser usados pelo cliente:
 
-> /tchau 
+> /tchau
+
 O comando /tchau é usado pelo cliente quando este quer se retirar do bate-papo. Caso o cliente dê um Ctrl + C no terminal, ele também é desconectado corretamente do bate-papo pois envia, por default, o /tchau para o servidor. 
 		
 > /bloquear usuario
