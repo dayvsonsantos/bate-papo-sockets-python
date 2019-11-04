@@ -7,20 +7,22 @@ from base64 import b64encode
 
 import random, string, base64
 
-import json
 
 class AESciph:
     def __init__(self):
         self.key = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(32))
         self.iv = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))
 
-    def _encrypt(self, msg):
+    def get_key(self):
+        return self.key
+
+    def encrypto(self, msg):
         enc_s = AES.new(self.key, AES.MODE_CFB, self.iv)
         cipher_text = enc_s.encrypt(msg)
         encoded_cipher_text = base64.b64encode(cipher_text)
         return encoded_cipher_text, self.key
 
-    def _decrypt(self, msg_enc, key):
+    def dencrypto(self, msg_enc, key):
         decryption_suite = AES.new(key, AES.MODE_CFB, self.iv)
         plain_text = decryption_suite.decrypt(base64.b64decode(msg_enc))
         return plain_text
@@ -72,8 +74,8 @@ class RSAciph:
             dsize = SHA.digest_size
             sentinel = Random.new().read(15+dsize)
             cipher = PKCS1_v1_5.new(key)
-            message= cipher.decrypt(ciphertext, sentinel)
+            message = cipher.decrypt(ciphertext, sentinel)
             digest = SHA.new(message[:-dsize]).digest()
             return message[-dsize:]
         except:
-            print("ERRO: não descriptografado")
+            print("ERRO: not descryptography")

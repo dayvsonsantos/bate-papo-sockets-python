@@ -3,6 +3,10 @@ import socket
 import sys
 import threading
 import os
+import cryptography
+
+aes = cryptography.AESciph()
+rsa = cryptography.RSAciph()
 
 class Cliente:
 	'''Usuário do bate-papo'''
@@ -12,9 +16,12 @@ class Cliente:
 		self.host = host
 		self.port = port
 
-
 	def envia_mensagem(self):
 		'''Envia mensagem ao servidor'''
+
+		self.s.send(rsa.get_public_key().exportKey('PEM'))
+		pbkey = self.s.recv(2048).decode('utf-8')
+		print(pbkey)
 
 		try:
 			while True:
@@ -69,6 +76,7 @@ class Cliente:
 		dest = (self.host, self.port)
 		try:
 			self.s.connect(dest)	#conecta ao servidor
+
 		except:
 			print("Servidor não está conectado no momento.")
 			sys.exit()

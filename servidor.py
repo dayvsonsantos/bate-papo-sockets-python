@@ -4,6 +4,10 @@ import sys
 import threading
 import os
 import time
+import cryptography
+
+rsa = cryptography.RSAciph()
+aes = cryptography.AESciph()
 
 class Servidor:
 	'''Serve como servidor de um bate papo. Essa classe é responsável por gerenciar as mensagens que chegam dos clientes
@@ -33,7 +37,7 @@ class Servidor:
 
 	def cria_conexao_tcp(self):
 		'''Cria uma conexão TCP '''
-
+		print("Iniciando servidor...")
 		dest = (self.host, self.port)
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -41,10 +45,11 @@ class Servidor:
 		try:
 			#Vincula socket a um endereço particular e porta
 			self.s.bind(dest)
+			print("Servidor iniciado!")
 		except:
 			print ('Bind falhou')
 			os._exit(1)
-
+		print("Ouvindo Conexões...")
 		self.s.listen(5)
 
 	def encerra_conexao_tcp(self):
@@ -150,7 +155,7 @@ class Servidor:
 		'''Lista de bloqueados do usuário passado por parâmetro. Retorna string formatada para envio ao cliente'''
 
 		bloqueados = 'Sua lista de usuários bloqueados:\n'
-		con, list_bloq, qm_bloqueou = self.clientes.get(usuario)
+		con, pbkey, list_bloq, qm_bloqueou = self.clientes.get(usuario)
 
 		if not list_bloq:
 			return 'Não tem nenhum usuário até o momento.' 
@@ -169,9 +174,9 @@ class Servidor:
 			self.envia_mensagem_privada([], usuario, msg)
 			return
 		
-		con, bloqueados, quem_bloq = self.clientes.get(usuario)
+		con, pbkey, bloqueados, quem_bloq = self.clientes.get(usuario)
 		del bloqueados[bloqueados.index(bloqueado)]
-		con, bloqueados, quem_bloq = self.clientes.get(bloqueado)
+		con, pbkey, bloqueados, quem_bloq = self.clientes.get(bloqueado)
 		del quem_bloq[quem_bloq.index(usuario)]
 
 		print('{0} desbloqueou {1}.'.format(usuario, bloqueado))
@@ -194,9 +199,9 @@ class Servidor:
 			msg = 'O usuário que deseja bloquear já está bloqueado.'
 			self.envia_mensagem_privada([], usuario, msg)
 
-		con, bloqueados, quem_bloq = self.clientes.get(usuario)
+		con, pbkey, bloqueados, quem_bloq = self.clientes.get(usuario)
 		bloqueados.append(bloqueado)
-		con, bloqueados, quem_bloq = self.clientes.get(bloqueado)
+		con, pbkey, bloqueados, quem_bloq = self.clientes.get(bloqueado)
 		quem_bloq.append(usuario)
 
 		print('{0} bloqueou {1}.'.format(usuario, bloqueado))
@@ -238,20 +243,24 @@ class Servidor:
 	def controle_conexao(self, con):
 		'''Faz o controle de conexão de cada cliente. Cada cliente é executado por uma thread a partir desse ponto'''
 		
-		con.send('Bem-vindo ao bate-papo Rêssenger! Digite seu apelido:'.encode('utf-8'))
+		pbkey = con.recv(2048).decode('utf-8')
+		con.send(rsa.get_public_key().exportKey('PEM'))
+
+		con.send('Bem-vindo ao bate-papo Rêssenger! Digite seu apelido: '.encode('utf-8'))
 		apelido = con.recv(1024).decode('utf-8')
 		
 		#Verifica se o apelido é válido
 		existe = self.verifica_apelido(apelido)
 		while existe:
-			con.send('Desculpa, esse apelido já está sendo usado por outra pessoa ou é um comando no bate-papo e não deve ser usado. Tente outro apelido:'.encode('utf-8'))
+			con.send('Desculpa, esse apelido já está sendo usado por outra pessoa ou é um comando no bate-papo e não deve ser usado. Tente outro apelido: '.encode('utf-8'))
 			apelido = con.recv(1024).decode('utf-8')
 			existe = self.verifica_apelido(apelido)
 
 		print("{} conectou-se ao bate-papo Rêssenger.".format(apelido))
 
 		#key: apelido. Value: (con, [bloqueados], [quem_me_bloqueou])
-		self.clientes[apelido] = (con, [], [])		
+		self.clientes[apelido] = (con, pbkey, [], [])
+		print(self.clientes[apelido])
 
 		msg = 'entrou no bate-papo.'
 		self.envia_mensagem_publica(apelido, msg, 1)
@@ -261,7 +270,7 @@ class Servidor:
 		'''Encerra o socket aberto com todos os clientes'''
 
 		for apelido, value in list(self.clientes.items()):
-			con, bloq, qm_bloq = value
+			con, pbkey, bloq, qm_bloq = value
 			con.close()
 
 	def envia_mensagem_publica(self, remetente, msg, flag = 0):
@@ -273,7 +282,7 @@ class Servidor:
 			#value: (con, [bloqueados], [qm_bloqueou]]
 
 			for apelido, value in list(self.clientes.items()):
-				conn, bloq, qm_bloq = value
+				conn, pbkey, bloq, qm_bloq = value
 				#Verifica que o usuario que irá receber a mensagem não é o mesmo que envia a mensagem.
 				#Verifica que não está bloqueado pelo remetente
 				#Verifica se o usuário que irá receber a mensagem não bloqueou o usuário remetente.
@@ -302,8 +311,7 @@ class Servidor:
 	def envia_mensagem_privada(self, remetente, destinatario, msg):
 		'''Envia mensagem de um cliente para um único usuário'''
 		
-
-		con, bloq_dest, qm_bloq_dest = self.clientes.get(destinatario)
+		con, pbkey, bloq_dest, qm_bloq_dest = self.clientes.get(destinatario)
 
 		if remetente != []:
 			#Verifica se o remetente não bloqueou o destinatário, ou o destinatário não bloqueou o cliente
@@ -340,15 +348,15 @@ class Servidor:
 		'''Esse método é chamado internamente pela encerrar conexão de um cliente.'''
 
 		#Pega conexão que será encerrada
-		con, bloqueados, quem_bloq = self.clientes.get(apelido)
+		con, pbkey, bloqueados, quem_bloq = self.clientes.get(apelido)
 		
 		#desbloqueia todos os usuários bloqueados e sai da lista de bloqueados dos outros usuários e de quem bloqueou também
 		for bloqueado in bloqueados:
-			conn, list_bloq, list_quem_bloq = self.clientes.get(bloqueado)
+			conn, pbkey, list_bloq, list_quem_bloq = self.clientes.get(bloqueado)
 			del list_quem_bloq[list_quem_bloq.index(usuario)]
 		
 		for bloqueador in quem_bloq:
-			conn, list_bloq, list_quem_bloq = self.clientes.get(bloqueador)
+			conn, pbkey, list_bloq, list_quem_bloq = self.clientes.get(bloqueador)
 			del list_bloq[list_bloq.index(apelido)]
 
 		#Remove do dicionário
