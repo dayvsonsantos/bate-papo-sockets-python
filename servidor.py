@@ -5,6 +5,7 @@ import threading
 import os
 import time
 import cryptography
+from cryptography import RSA
 
 rsa = cryptography.RSAciph()
 aes = cryptography.AESciph()
@@ -236,19 +237,26 @@ class Servidor:
 		while True:
 			try:
 				msg = con.recv(4026).decode('utf-8')
+				print(type(msg))
+				print(msg)
+				print(rsa.decrypto(msg))
 				self.comando_msg(apelido, msg)
 			except:
 				break
 
 	def controle_conexao(self, con):
 		'''Faz o controle de conexão de cada cliente. Cada cliente é executado por uma thread a partir desse ponto'''
-		
-		pbkey = con.recv(2048).decode('utf-8')
 		con.send(rsa.get_public_key().exportKey('PEM'))
-
+		pbkey = con.recv(2048).decode('utf-8')
+	
 		con.send('Bem-vindo ao bate-papo Rêssenger! Digite seu apelido: '.encode('utf-8'))
-		apelido = con.recv(1024).decode('utf-8')
 		
+		apelido = con.recv(1024).decode('utf-8')
+		#print(f'apelido={apelido}\n') 
+		#apelido = rsa.decrypto(apelido)
+		#print(apelido)
+
+
 		#Verifica se o apelido é válido
 		existe = self.verifica_apelido(apelido)
 		while existe:
@@ -260,7 +268,7 @@ class Servidor:
 
 		#key: apelido. Value: (con, [bloqueados], [quem_me_bloqueou])
 		self.clientes[apelido] = (con, pbkey, [], [])
-		print(self.clientes[apelido])
+		#print(self.clientes[apelido])
 
 		msg = 'entrou no bate-papo.'
 		self.envia_mensagem_publica(apelido, msg, 1)

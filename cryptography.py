@@ -22,7 +22,7 @@ class AESciph:
         encoded_cipher_text = base64.b64encode(cipher_text)
         return encoded_cipher_text, self.key
 
-    def dencrypto(self, msg_enc, key):
+    def decrypto(self, msg_enc, key):
         decryption_suite = AES.new(key, AES.MODE_CFB, self.iv)
         plain_text = decryption_suite.decrypt(base64.b64decode(msg_enc))
         return plain_text
@@ -68,7 +68,7 @@ class RSAciph:
         ciphertext = cipher.encrypt(new_msg+h.digest())
         return ciphertext
 
-    def dencrypto(self, ciphertext):
+    def decrypto(self, ciphertext):
         try:
             key = self.private_key
             dsize = SHA.digest_size
@@ -76,6 +76,29 @@ class RSAciph:
             cipher = PKCS1_v1_5.new(key)
             message = cipher.decrypt(ciphertext, sentinel)
             digest = SHA.new(message[:-dsize]).digest()
-            return message[-dsize:]
+            return message[:-dsize]
         except:
             print("ERRO: not descryptography")
+
+
+# if __name__ == "__main__":
+#     r = RSAciph()
+#     a = AESciph()
+
+#     m = 'oi'
+#     e,k = a.encrypto(m)
+
+#     print(k)
+
+#     ee = r.encrypto(m, r.get_public_key())
+#     de = r.decrypto(ee)
+
+#     print(type(ee))
+#     print(de)
+#     print(k)
+
+#     ee = r.encrypto(m, r.get_public_key())
+#     de = r.decrypto(ee)
+
+#     print(ee)
+#     print(de)

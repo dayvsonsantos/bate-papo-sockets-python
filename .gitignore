@@ -1,3 +1,4 @@
 Pipfile
 .vscode/
 gui/__pycache__/
+__pycache__/
