@@ -6,6 +6,7 @@ import os
 import time
 import cryptography
 from cryptography import RSA
+import time
 
 rsa = cryptography.RSAciph()
 aes = cryptography.AESciph()
@@ -133,28 +134,22 @@ class Servidor:
 
 	def pega_apelido(self, nome):
 		'''Para comandos de bloquear, desbloquear e mandar privado, essa função retorna o apelido da pessoa'''
-		
 		destinatario = ''
-
 		for apelido in self.clientes:
 			if nome.startswith(apelido):
 				destinatario = apelido
 				break
-
 		return destinatario
 
 	def lista_online(self):
 		'''Lista de usuários online no chat. Retorna string formatada para envio ao cliente'''
-
 		online = 'Lista de clientes conectados no bate-papo no momento:\n'
 		for clientes in list(self.clientes.keys()):
 			online = online + clientes + '\n'
-
 		return online[:-1]
 
 	def lista_bloqueados(self, usuario):
 		'''Lista de bloqueados do usuário passado por parâmetro. Retorna string formatada para envio ao cliente'''
-
 		bloqueados = 'Sua lista de usuários bloqueados:\n'
 		con, pbkey, list_bloq, qm_bloqueou = self.clientes.get(usuario)
 
@@ -169,7 +164,6 @@ class Servidor:
 
 	def desbloquear_usuario(self, usuario, bloqueado):
 		'''Usuario é quem quer desbloquear, e bloqueado é quem deve ser desbloqueado'''
-
 		if usuario == bloqueado or not self.verifica_bloqueio(usuario, bloqueado):
 			msg = 'O usuário que deseja desbloquear não está bloqueado.'
 			self.envia_mensagem_privada([], usuario, msg)
@@ -189,8 +183,7 @@ class Servidor:
 
 
 	def bloquear_usuario(self, usuario, bloqueado):
-		'''Usuario é quem quer bloquear, e bloqueado é quem deve ser bloqueado'''
-		
+		'''Usuario é quem quer bloquear, e bloqueado é quem deve ser bloqueado'''		
 		if usuario == bloqueado:
 			msg = 'Não é possível se auto-bloquear.'
 			self.envia_mensagem_privada([], usuario, msg)
@@ -224,7 +217,7 @@ class Servidor:
 	def verifica_bloqueio(self, usuario, bloqueado):
 		'''Verifica se bloqueado já está bloqueado pelo usuario. Retorna True se estiver, False caso contário'''
 
-		con, bloqueados, quem_bloq = self.clientes.get(usuario)
+		con, pbkey, bloqueados, quem_bloq = self.clientes.get(usuario)
 		
 		if bloqueado in bloqueados:
 			return True
@@ -233,31 +226,45 @@ class Servidor:
 
 	def recebe_mensagem(self, apelido, con):
 		'''Recebe mensagem do usuário'''
-
 		while True:
-			try:
-				msg = con.recv(4026).decode('utf-8')
-				print(type(msg))
-				print(msg)
-				print(rsa.decrypto(msg))
-				self.comando_msg(apelido, msg)
-			except:
-				break
+			# try:
+			
+			msg = con.recv(10240)
+			print(f'mensagem recebida encriptografada = {msg}')
+			time.sleep(0.5)
+
+			key = con.recv(6144)
+			print(f'chave recebida encriptografada = {key}\n')
+			time.sleep(0.5)
+
+			iv = con.recv(6144)
+			print(f'iv recebida encriptografada = {iv}')
+
+			key = rsa.decrypto(key).decode('utf-8')
+			print(f'chave decriptografada = {key}')
+
+			iv = rsa.decrypto(iv).decode('utf-8')
+			print(f'iv decriptografada = {iv}')
+
+			msg = aes.decrypto(msg, key, iv).decode('utf-8')
+			print(f'mensagem decriptografada = {msg}')
+
+			self.comando_msg(apelido, msg)
+			# except:
+			# 	break
 
 	def controle_conexao(self, con):
 		'''Faz o controle de conexão de cada cliente. Cada cliente é executado por uma thread a partir desse ponto'''
 		con.send(rsa.get_public_key().exportKey('PEM'))
 		pbkey = con.recv(2048).decode('utf-8')
-	
-		con.send('Bem-vindo ao bate-papo Rêssenger! Digite seu apelido: '.encode('utf-8'))
 		
+		# msg_enc = con.recv(4026)#.decode('utf-8')
+		# msg = rsa.decrypto(msg_enc)
+		# print(f'mesagem decritografada = {msg}')
+
+		con.send('Bem-vindo ao bate-papo Rêssenger! Digite seu apelido: '.encode('utf-8'))
 		apelido = con.recv(1024).decode('utf-8')
-		#print(f'apelido={apelido}\n') 
-		#apelido = rsa.decrypto(apelido)
-		#print(apelido)
 
-
-		#Verifica se o apelido é válido
 		existe = self.verifica_apelido(apelido)
 		while existe:
 			con.send('Desculpa, esse apelido já está sendo usado por outra pessoa ou é um comando no bate-papo e não deve ser usado. Tente outro apelido: '.encode('utf-8'))
@@ -266,7 +273,7 @@ class Servidor:
 
 		print("{} conectou-se ao bate-papo Rêssenger.".format(apelido))
 
-		#key: apelido. Value: (con, [bloqueados], [quem_me_bloqueou])
+		#key: apelido. Value: (con, key, [bloqueados], [quem_me_bloqueou])
 		self.clientes[apelido] = (con, pbkey, [], [])
 		#print(self.clientes[apelido])
 
@@ -311,7 +318,7 @@ class Servidor:
 				msg = remetente + ' ' + msg
 		else:
 			msg = '<'+ remetente + '> ' + msg
-			con, bloqueados, list_quem_bloqueou = self.clientes.get(remetente)
+			con, pbkey, bloqueados, list_quem_bloqueou = self.clientes.get(remetente)
 
 		envia_mensagem_para_todos()
 

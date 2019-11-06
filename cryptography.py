@@ -20,10 +20,10 @@ class AESciph:
         enc_s = AES.new(self.key, AES.MODE_CFB, self.iv)
         cipher_text = enc_s.encrypt(msg)
         encoded_cipher_text = base64.b64encode(cipher_text)
-        return encoded_cipher_text, self.key
+        return encoded_cipher_text, self.key, self.iv
 
-    def decrypto(self, msg_enc, key):
-        decryption_suite = AES.new(key, AES.MODE_CFB, self.iv)
+    def decrypto(self, msg_enc, key, iv):
+        decryption_suite = AES.new(key, AES.MODE_CFB, iv)
         plain_text = decryption_suite.decrypt(base64.b64decode(msg_enc))
         return plain_text
 
@@ -78,27 +78,24 @@ class RSAciph:
             digest = SHA.new(message[:-dsize]).digest()
             return message[:-dsize]
         except:
-            print("ERRO: not descryptography")
+            print("Erro: A mensagem não foi descriptografada")
 
 
 # if __name__ == "__main__":
 #     r = RSAciph()
 #     a = AESciph()
 
-#     m = 'oi'
+#     m = 'oi, A VIDA E BELA MORADA DA CIDADE'
 #     e,k = a.encrypto(m)
 
-#     print(k)
+#     print(e, k)
 
-#     ee = r.encrypto(m, r.get_public_key())
-#     de = r.decrypto(ee)
-
-#     print(type(ee))
-#     print(de)
-#     print(k)
-
-#     ee = r.encrypto(m, r.get_public_key())
+#     ee = r.encrypto(k, r.get_public_key())
 #     de = r.decrypto(ee)
 
 #     print(ee)
 #     print(de)
+
+#     ee = a.decrypto(e, de)
+    
+#     print(ee)

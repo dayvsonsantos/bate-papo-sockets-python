@@ -22,24 +22,39 @@ class Cliente:
 
 	def envia_mensagem(self, serv_key):
 		'''Envia mensagem ao servidor'''
-		
-		'''
-		len(xxx)(xxx):
-		{
-			chave: crypto
-			mesagem: crypto
-		}
-		'''
-
 		#try:
-		while True:
-			msg = input('>-==: ')
-			
-			msg_encr, aes_key = aes.encrypto(msg)
-			serv_key = RSA.importKey(serv_key)
-			aes_key_encr = rsa.encrypto(aes_key, serv_key)
+		# importanto a chave do servidor
+		serv_key = RSA.importKey(serv_key)
 
-			self.s.sendall(bytes(msg_encr))
+		while True:
+			msg = input()
+
+			print('\nEncriptando mensagem...')
+			msg_encr, aes_key, aes_iv = aes.encrypto(msg)
+			print(f'MSG ENCRIPTO = {msg_encr}\n')
+			
+			print(f'AES KEY = {aes_key}')
+			print('encriptando chave...')
+			aes_key_encr = rsa.encrypto(aes_key, serv_key)
+			print(f'KEY ENCRIPTO = {aes_key_encr}\n')
+
+			print(f'AES IV = {aes_key}')
+			print('encriptando iv...')
+			aes_iv_encr = rsa.encrypto(aes_iv, serv_key)
+			print(f'IV ENCRIPTO = {aes_iv_encr}\n')
+
+
+			print(f'envidando mensagem...')
+			self.s.sendall(msg_encr)
+			import time
+			time.sleep(0.5)
+			print(f'envidando chave...')
+			self.s.sendall(aes_key_encr)
+			time.sleep(0.5)
+			print(f'envidando iv...\n')
+			self.s.sendall(aes_iv_encr)
+			time.sleep(0.5)
+
 
 			#self.s.send(msg.encode('utf-8'))
 			is_saida = msg.split() #Coloca as substrings da mensagem numa lista
@@ -69,7 +84,6 @@ class Cliente:
 				self.s.close()
 				os._exit(1)
 			print (msg)
-			input("Apelido: ")
 
 	def cria_conexao_tcp(self):
 		'''Cria conexão TCP com o servidor'''
@@ -87,17 +101,23 @@ class Cliente:
 			print("Servidor não está conectado no momento.")
 			sys.exit()
 
-
 	def main(self):
 		'''Começa a execução do cliente, conecta socket TCP '''
 
 		self.cria_conexao_tcp()
 
+		print('pegando a chave publica do servidor...')
 		SERVIDOR_KEY = self.s.recv(2048).decode('utf-8')
 		self.s.send(rsa.get_public_key().exportKey('PEM'))
-		#print(pbkey_servidor)
+		
+		# print('encriptando a mensagem...')
+		# msg = 'oi'
+		# serv_key = RSA.importKey(SERVIDOR_KEY)
+		# print('enviado a mensagem critografada...')
+		# msg_enc = rsa.encrypto(msg, serv_key)
+		#self.s.send(msg_enc)
+
 		msg = self.s.recv(4096).decode('utf-8')
-		print(msg)
 		apelido = input("Apelido: ")
 		self.s.sendall(apelido.encode('utf-8'))
 
