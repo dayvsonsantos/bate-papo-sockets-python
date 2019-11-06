@@ -2,6 +2,8 @@ import socket
 import sys
 import threading
 import os
+import time
+
 from cryptography import AESciph
 from cryptography import RSAciph
 from cryptography import RSA
@@ -34,11 +36,12 @@ class Cliente:
 			print(f'MSG ENCRIPTO = {msg_encr}\n')
 			
 			print(f'AES KEY = {aes_key}')
+			print(f'AES IV = {aes_iv}\n')
+
 			print('encriptando chave...')
 			aes_key_encr = rsa.encrypto(aes_key, serv_key)
 			print(f'KEY ENCRIPTO = {aes_key_encr}\n')
 
-			print(f'AES IV = {aes_key}')
 			print('encriptando iv...')
 			aes_iv_encr = rsa.encrypto(aes_iv, serv_key)
 			print(f'IV ENCRIPTO = {aes_iv_encr}\n')
@@ -46,7 +49,6 @@ class Cliente:
 
 			print(f'envidando mensagem...')
 			self.s.sendall(msg_encr)
-			import time
 			time.sleep(0.5)
 			print(f'envidando chave...')
 			self.s.sendall(aes_key_encr)
@@ -54,6 +56,7 @@ class Cliente:
 			print(f'envidando iv...\n')
 			self.s.sendall(aes_iv_encr)
 			time.sleep(0.5)
+			print('mensagem enviada!!!')
 
 
 			#self.s.send(msg.encode('utf-8'))
@@ -70,20 +73,44 @@ class Cliente:
 		# 	self.s.close()
 		# 	os._exit(1)
 
+	def recebe_msg_chave_iv(self):
+		msg = self.s.recv(10240)
+		print(f'\nMensagem recebida encriptografada = {msg}\n')
+		time.sleep(0.5)
 
-	def feedback_servidor(self):
+		key = self.s.recv(6144)
+		print(f'Chave recebida encriptografada = {key}\n')
+		time.sleep(0.5)
+
+		iv = self.s.recv(6144)
+		print(f'iv recebida encriptografada = {iv}\n')
+
+		key = rsa.decrypto(key).decode('utf-8')
+		print(f'chave decriptografada = {key}')
+
+		iv = rsa.decrypto(iv).decode('utf-8')
+		print(f'iv decriptografada = {iv}')
+
+		msg = aes.decrypto(msg, key, iv).decode('utf-8')
+		print(f'mensagem decriptografada = {msg}\n')
+
+	def recebe_mensagem_do_servidor(self):
 		'''Recebe mensagem do servidor'''
 		while True:
 			msg = self.s.recv(4096).decode('utf-8')
+			time.sleep(0.5)
 			if msg == '/SERVIDOR_OFF': #Servidor por algum motivo encerrou
 				print('Encerrando conexão, servidor está OFF.')
 				self.s.close()
 				os._exit(1)			
-			if msg.startswith('/BANIDO'):
+			elif msg.startswith('/BANIDO'):
 				print(' '.join(msg.split()[1:]))
 				self.s.close()
 				os._exit(1)
-			print (msg)
+			elif msg == '/vaichave':	
+				self.recebe_msg_chave_iv()
+			else:
+				print (msg)
 
 	def cria_conexao_tcp(self):
 		'''Cria conexão TCP com o servidor'''
@@ -121,7 +148,7 @@ class Cliente:
 		apelido = input("Apelido: ")
 		self.s.sendall(apelido.encode('utf-8'))
 
-		thread = threading.Thread(target = self.feedback_servidor)
+		thread = threading.Thread(target = self.recebe_mensagem_do_servidor)
 		thread.start()
 		self.envia_mensagem(SERVIDOR_KEY)
 		

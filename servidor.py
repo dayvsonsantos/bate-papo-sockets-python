@@ -238,7 +238,7 @@ class Servidor:
 			time.sleep(0.5)
 
 			iv = con.recv(6144)
-			print(f'iv recebida encriptografada = {iv}')
+			print(f'iv recebida encriptografada = {iv}\n')
 
 			key = rsa.decrypto(key).decode('utf-8')
 			print(f'chave decriptografada = {key}')
@@ -302,7 +302,7 @@ class Servidor:
 				#Verifica que não está bloqueado pelo remetente
 				#Verifica se o usuário que irá receber a mensagem não bloqueou o usuário remetente.
 				if apelido != remetente and not apelido in bloqueados and not apelido in list_quem_bloqueou:
-					self.envio_mensagem(conn, apelido, msg)
+					self.envio_mensagem(conn, apelido, msg, pbkey)
 
 		if not self.clientes: #Servidor vai fechar e não tem ninguém conectado
 			return
@@ -346,18 +346,49 @@ class Servidor:
 				#Envia mensagem privada
 				msg = '<' + remetente + '> <Privado> ' + msg
 
-		self.envio_mensagem(con, destinatario, msg)
+		self.envio_mensagem(con, destinatario, msg, pbkey)
 
 
-	def envio_mensagem(self, con, apelido, msg):
+	def envio_mensagem(self, con, apelido, msg, pbkey):
 		'''Esse método é chamado internamente pela função envia_mensagem_publica e envia_mensagem_privada.
 		Ele envia através do socket(con) a mensagem ao destinatário.
 		Caso a mensagem não consiga ser enviada(erro no socket), o destinatário tem sua conexão encerrada'''
 
 		try:
-			con.send(msg.encode('utf-8'))
+			#con.send(msg.encode('utf-8'))
+			''' avisando o cliente que vai enviar um mensagem '''
+			con.sendall('/vaichave'.encode('utf-8'))
+			time.sleep(0.5)
+			
+			''' importando a chave publica do cliente  para criptografar '''
+			pbkey = RSA.importKey(pbkey)
+
+			print('\nEncriptando mensagem...')
+			msg_encr, aes_key, aes_iv = aes.encrypto(msg)
+			print(f'MSG ENCRIPTO = {msg_encr}\n')
+			
+			print(f'AES KEY = {aes_key}')
+			print(f'AES IV = {aes_key}\n')
+
+			print('encriptando chave...')
+			aes_key_encr = rsa.encrypto(aes_key, pbkey)
+			print(f'KEY ENCRIPTO = {aes_key_encr}\n')
+			
+			print('encriptando iv...')
+			aes_iv_encr = rsa.encrypto(aes_iv, pbkey)
+			print(f'IV ENCRIPTO = {aes_iv_encr}\n')
+
+			print(f'envidando mensagem...')
+			con.sendall(msg_encr)
+			time.sleep(0.5)
+			print(f'envidando chave...')
+			con.sendall(aes_key_encr)
+			time.sleep(0.5)
+			print(f'envidando iv...\n')
+			con.sendall(aes_iv_encr)
+			time.sleep(0.5)
 		except:
-			pass
+			print('Erro: não foi possível enviar a mensagem para o destinátario')
 
 	def fim_conexao(self, apelido, banido = 0):
 		'''Esse método é chamado internamente pela encerrar conexão de um cliente.'''
