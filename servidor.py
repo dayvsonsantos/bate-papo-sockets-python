@@ -4,12 +4,13 @@ import sys
 import threading
 import os
 import time
-import cryptography
-from cryptography import RSA
-import time
 
-rsa = cryptography.RSAciph()
-aes = cryptography.AESciph()
+from cryptography import RSAciph
+from cryptography import AESciph
+from cryptography import RSA
+
+rsa = RSAciph()
+aes = AESciph()
 
 class Servidor:
 	'''Serve como servidor de um bate papo. Essa classe é responsável por gerenciar as mensagens que chegam dos clientes
@@ -227,31 +228,31 @@ class Servidor:
 	def recebe_mensagem(self, apelido, con):
 		'''Recebe mensagem do usuário'''
 		while True:
-			# try:
+			try:
 			
-			msg = con.recv(10240)
-			print(f'mensagem recebida encriptografada = {msg}')
-			time.sleep(0.5)
+				msg = con.recv(10240)
+				print(f'mensagem recebida encriptografada = {msg}')
+				time.sleep(0.5)
 
-			key = con.recv(6144)
-			print(f'chave recebida encriptografada = {key}\n')
-			time.sleep(0.5)
+				key = con.recv(6144)
+				print(f'chave recebida encriptografada = {key}\n')
+				time.sleep(0.5)
 
-			iv = con.recv(6144)
-			print(f'iv recebida encriptografada = {iv}\n')
+				iv = con.recv(6144)
+				print(f'iv recebida encriptografada = {iv}\n')
 
-			key = rsa.decrypto(key).decode('utf-8')
-			print(f'chave decriptografada = {key}')
+				key = rsa.decrypto(key).decode('utf-8')
+				print(f'chave decriptografada = {key}')
 
-			iv = rsa.decrypto(iv).decode('utf-8')
-			print(f'iv decriptografada = {iv}')
+				iv = rsa.decrypto(iv).decode('utf-8')
+				print(f'iv decriptografada = {iv}')
 
-			msg = aes.decrypto(msg, key, iv).decode('utf-8')
-			print(f'mensagem decriptografada = {msg}')
+				msg = aes.decrypto(msg, key, iv).decode('utf-8')
+				print(f'mensagem decriptografada = {msg}')
 
-			self.comando_msg(apelido, msg)
-			# except:
-			# 	break
+				self.comando_msg(apelido, msg)
+			except:
+				break
 
 	def controle_conexao(self, con):
 		'''Faz o controle de conexão de cada cliente. Cada cliente é executado por uma thread a partir desse ponto'''
@@ -294,7 +295,7 @@ class Servidor:
 		Se a flag for 1 significa que é o servidor que está enviando a mensagem'''
 
 		def envia_mensagem_para_todos():
-			#value: (con, [bloqueados], [qm_bloqueou]]
+			#value: (con, pbkey, [bloqueados], [qm_bloqueou]]
 
 			for apelido, value in list(self.clientes.items()):
 				conn, pbkey, bloq, qm_bloq = value
