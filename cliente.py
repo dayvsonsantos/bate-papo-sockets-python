@@ -143,9 +143,6 @@ class Cliente:
 		# print('enviado a mensagem critografada...')
 		# msg_enc = rsa.encrypto(msg, serv_key)
 		#self.s.send(msg_enc)
-		
-		from PyQt5.QtWidgets import QApplication, QWidget, QInputDialog, QLineEdit
-		from PyQt5.QtGui import QIcon
 
 		msg = self.s.recv(4096).decode('utf-8')
 		apelido = input("Apelido: ")	
