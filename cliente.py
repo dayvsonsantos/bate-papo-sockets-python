@@ -9,10 +9,8 @@ from cryptography import RSAciph
 from cryptography import RSA
 
 
-aes = AESciph()
+#aes = AESciph()
 rsa = RSAciph()
-
-SERVIDOR_KEY = ''
 
 class Cliente:
 	'''Usuário do bate-papo'''
@@ -21,6 +19,13 @@ class Cliente:
 		'''Inicializa as variáveis iniciais do cliente'''
 		self.host = host
 		self.port = port
+
+	def mostrar_chaves(self):
+		PB_KEY = rsa.get_public_key().exportKey('PEM').decode('utf-8')
+		PV_KEY = rsa.get_private_key().exportKey('PEM').decode('utf-8')
+		print(f'\n\nCHAVE PUBLICA - CLIENTE\n\n{PB_KEY}\n\n')
+		print(f'\n\nCHAVE PRIVADA - CLIENTE\n\n{PV_KEY}\n\n')
+		print(f'\n\nCHAVE PUBLICA - SERVIDOR\n\n{self.SERVIDOR_KEY}\n\n')
 
 	def envia_mensagem(self, serv_key):
 		'''Envia mensagem ao servidor'''
@@ -31,32 +36,33 @@ class Cliente:
 		while True:
 			msg = input()
 
-			print('\nEncriptando mensagem...')
+			#print('\nEncriptando mensagem...')
+			aes = AESciph()
 			msg_encr, aes_key, aes_iv = aes.encrypto(msg)
-			print(f'MSG ENCRIPTO = {msg_encr}\n')
+			#print(f'MSG ENCRIPTO = {msg_encr}\n')
 			
-			print(f'AES KEY = {aes_key}')
-			print(f'AES IV = {aes_iv}\n')
+			print(f'\nAES KEY = {aes_key}\n')
+			# print(f'AES IV = {aes_iv}\n')
 
-			print('encriptando chave...')
+			# print('encriptando chave...')
 			aes_key_encr = rsa.encrypto(aes_key, serv_key)
-			print(f'KEY ENCRIPTO = {aes_key_encr}\n')
+			#print(f'KEY ENCRIPTO = {aes_key_encr}\n')
 
-			print('encriptando iv...')
+			#print('encriptando iv...')
 			aes_iv_encr = rsa.encrypto(aes_iv, serv_key)
-			print(f'IV ENCRIPTO = {aes_iv_encr}\n')
+			#print(f'IV ENCRIPTO = {aes_iv_encr}\n')
 
 
-			print(f'envidando mensagem...')
+			#print(f'envidando mensagem...')
 			self.s.sendall(msg_encr)
 			time.sleep(0.5)
-			print(f'envidando chave...')
+			#print(f'envidando chave...')
 			self.s.sendall(aes_key_encr)
 			time.sleep(0.5)
-			print(f'envidando iv...\n')
+			#print(f'envidando iv...\n')
 			self.s.sendall(aes_iv_encr)
 			time.sleep(0.5)
-			print('mensagem enviada!!!')
+			#print('mensagem enviada!!!')
 
 
 			#self.s.send(msg.encode('utf-8'))
@@ -75,21 +81,21 @@ class Cliente:
 
 	def recebe_msg_chave_iv(self):
 		msg = self.s.recv(10240)
-		print(f'\nMensagem recebida encriptografada = {msg}\n')
+		#print(f'\nMensagem recebida encriptografada = {msg}\n')
 		time.sleep(0.5)
 
 		key = self.s.recv(6144)
-		print(f'Chave recebida encriptografada = {key}\n')
+		#print(f'Chave recebida encriptografada = {key}\n')
 		time.sleep(0.5)
 
 		iv = self.s.recv(6144)
-		print(f'iv recebida encriptografada = {iv}\n')
+		#print(f'iv recebida encriptografada = {iv}\n')
 
 		key = rsa.decrypto(key).decode('utf-8')
-		print(f'chave decriptografada = {key}')
+		#print(f'chave decriptografada = {key}')
 
 		iv = rsa.decrypto(iv).decode('utf-8')
-		print(f'iv decriptografada = {iv}')
+		#print(f'iv decriptografada = {iv}')
 
 		msg = aes.decrypto(msg, key, iv).decode('utf-8')
 		print(f'mensagem decriptografada = {msg}\n')
@@ -133,24 +139,20 @@ class Cliente:
 
 		self.cria_conexao_tcp()
 
-		print('pegando a chave publica do servidor...')
-		SERVIDOR_KEY = self.s.recv(2048).decode('utf-8')
+		# pegando a chave publica do servidor
+		self.SERVIDOR_KEY = self.s.recv(2048).decode('utf-8')
+		# enviando a minha chave publica
 		self.s.send(rsa.get_public_key().exportKey('PEM'))
-		
-		# print('encriptando a mensagem...')
-		# msg = 'oi'
-		# serv_key = RSA.importKey(SERVIDOR_KEY)
-		# print('enviado a mensagem critografada...')
-		# msg_enc = rsa.encrypto(msg, serv_key)
-		#self.s.send(msg_enc)
-
+		# mandando o apelido para o servidor
 		msg = self.s.recv(4096).decode('utf-8')
 		apelido = input("Apelido: ")	
 		self.s.sendall(apelido.encode('utf-8'))
-
+		time.sleep(0.5)
+		self.mostrar_chaves()
+		time.sleep(0.5)
 		thread = threading.Thread(target = self.recebe_mensagem_do_servidor)
 		thread.start()
-		self.envia_mensagem(SERVIDOR_KEY)
+		self.envia_mensagem(self.SERVIDOR_KEY)
 		
 
 if __name__ == "__main__":

@@ -26,11 +26,14 @@ class Servidor:
 		self.palavras_reservadas = ['tchau', '/tchau', 'lista_online', '/lista_online', 'lista_bloqueados',
 		 '/lista_bloqueados', 'bloquear', '/bloquear', 'desbloquear', '/desbloquear',
 		  'SERVIDOR_OFF', '/SERVIDOR_OFF', 'BANIDO', '/BANIDO']
-		self.clientes = {} #key: apelido. Value: (con, [bloqueados], [quem_me_bloqueou])
+		self.clientes = {} #key: apelido. Value: (con, key, [bloqueados], [quem_me_bloqueou])
 
 	def main(self):
 		'''Começa a execução do servidor, aqui as threads são inicializadas e enviadas aos respectivos métodos'''
-		
+		PB_KEY = rsa.get_public_key().exportKey('PEM').decode('utf-8')
+		PV_KEY = rsa.get_private_key().exportKey('PEM').decode('utf-8')
+		print(f'\n\nCHAVE PUBLICA - SERVIDOR\n\n{PB_KEY}\n\n')
+		print(f'\n\nCHAVE PRIVADA - SERVIDOR\n\n{PV_KEY}\n\n')
 		try:
 			self.cria_conexao_tcp()
 			self.aceita_conexao_clientes()
@@ -115,6 +118,7 @@ class Servidor:
 
 			elif is_comando[0] == '/lista_online':
 				msg = self.lista_online()
+				self.mostrar_chave()
 				self.envia_mensagem_privada([], remetente, msg)
 
 			else:
@@ -132,6 +136,12 @@ class Servidor:
 		else:
 			#É uma mensagem pública
 			self.envia_mensagem_publica(remetente, msg)
+	
+	def mostrar_chave(self):
+		''' mostrar apelido e chaves '''
+		for apelido in self.clientes.keys():
+			con, key, l1, l2 = self.clientes[apelido]
+			print(f'\nApelido = {apelido}\n\n public key = {key}\n')
 
 	def pega_apelido(self, nome):
 		'''Para comandos de bloquear, desbloquear e mandar privado, essa função retorna o apelido da pessoa'''
@@ -231,24 +241,24 @@ class Servidor:
 			try:
 			
 				msg = con.recv(10240)
-				print(f'mensagem recebida encriptografada = {msg}')
+				#print(f'mensagem recebida encriptografada = {msg}')
 				time.sleep(0.5)
 
 				key = con.recv(6144)
-				print(f'chave recebida encriptografada = {key}\n')
+				#print(f'chave recebida encriptografada = {key}\n')
 				time.sleep(0.5)
 
 				iv = con.recv(6144)
-				print(f'iv recebida encriptografada = {iv}\n')
+				#print(f'iv recebida encriptografada = {iv}\n')
 
 				key = rsa.decrypto(key).decode('utf-8')
-				print(f'chave decriptografada = {key}')
+				#print(f'chave decriptografada = {key}')
 
 				iv = rsa.decrypto(iv).decode('utf-8')
-				print(f'iv decriptografada = {iv}')
+				#print(f'iv decriptografada = {iv}')
 
 				msg = aes.decrypto(msg, key, iv).decode('utf-8')
-				print(f'mensagem decriptografada = {msg}')
+				#print(f'mensagem decriptografada = {msg}')
 
 				self.comando_msg(apelido, msg)
 			except:
@@ -364,28 +374,28 @@ class Servidor:
 			''' importando a chave publica do cliente  para criptografar '''
 			pbkey = RSA.importKey(pbkey)
 
-			print('\nEncriptando mensagem...')
+			#print('\nEncriptando mensagem...')
 			msg_encr, aes_key, aes_iv = aes.encrypto(msg)
-			print(f'MSG ENCRIPTO = {msg_encr}\n')
+			#print(f'MSG ENCRIPTO = {msg_encr}\n')
 			
-			print(f'AES KEY = {aes_key}')
-			print(f'AES IV = {aes_key}\n')
+			#print(f'AES KEY = {aes_key}')
+			#print(f'AES IV = {aes_key}\n')
 
-			print('encriptando chave...')
+			#print('encriptando chave...')
 			aes_key_encr = rsa.encrypto(aes_key, pbkey)
-			print(f'KEY ENCRIPTO = {aes_key_encr}\n')
+			#print(f'KEY ENCRIPTO = {aes_key_encr}\n')
 			
-			print('encriptando iv...')
+			#print('encriptando iv...')
 			aes_iv_encr = rsa.encrypto(aes_iv, pbkey)
-			print(f'IV ENCRIPTO = {aes_iv_encr}\n')
+			#print(f'IV ENCRIPTO = {aes_iv_encr}\n')
 
-			print(f'envidando mensagem...')
+			#print(f'envidando mensagem...')
 			con.sendall(msg_encr)
 			time.sleep(0.5)
-			print(f'envidando chave...')
+			#print(f'envidando chave...')
 			con.sendall(aes_key_encr)
 			time.sleep(0.5)
-			print(f'envidando iv...\n')
+			#print(f'envidando iv...\n')
 			con.sendall(aes_iv_encr)
 			time.sleep(0.5)
 		except:
