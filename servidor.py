@@ -38,7 +38,7 @@ class Servidor:
 			self.cria_conexao_tcp()
 			self.aceita_conexao_clientes()
 		except:
-			self.envia_mensagem_publica([], self.finaliza, 1)
+			self.envia_mensagem_publica_servidor([], self.finaliza, 1)
 			os._exit(1)
 
 	def cria_conexao_tcp(self):
@@ -251,15 +251,15 @@ class Servidor:
 				iv = con.recv(6144)
 				#print(f'iv recebida encriptografada = {iv}\n')
 
-				key = rsa.decrypto(key).decode('utf-8')
+				self.key = rsa.decrypto(key).decode('utf-8')
 				#print(f'chave decriptografada = {key}')
 
-				iv = rsa.decrypto(iv).decode('utf-8')
+				self.iv = rsa.decrypto(iv).decode('utf-8')
 				#print(f'iv decriptografada = {iv}')
 
-				print(f'Recebendo mensagem de = {con}\nCom a chave = {key}\n\n')
+				print(f'Recebendo mensagem de = {con}\nCom a chave = {self.key}\n\n')
 
-				msg = self.aes.decrypto(msg, key, iv).decode('utf-8')
+				msg = self.aes.decrypto(msg, self.key, self.iv).decode('utf-8')
 				#print(f'mensagem decriptografada = {msg}')
 
 				self.comando_msg(apelido, msg)
@@ -291,7 +291,7 @@ class Servidor:
 		#print(self.clientes[apelido])
 
 		msg = 'entrou no bate-papo.'
-		self.envia_mensagem_publica(apelido, msg, 1)
+		self.envia_mensagem_publica_servidor(apelido, msg, 1)
 		self.recebe_mensagem(apelido, con)
 
 	def encerra_todas_conexoes(self):
@@ -377,16 +377,11 @@ class Servidor:
 			pbkey = RSA.importKey(pbkey)
 
 			#print('\nEncriptando mensagem...')
-			self.aes = AESciph()
-			msg_encr, aes_key, aes_iv = self.aes.encrypto(msg)
+			aes = AESciph()
+			msg_encr, aes_key, aes_iv = aes.encrypto(msg, self.key, self.iv)
 			
 			print(f'Mandando mensagem para = {con}\nCom a chave = {aes_key}\n')
-			#print(f'MSG ENCRIPTO = {msg_encr}\n')
-			
-			#print(f'AES KEY = {aes_key}')
-			#print(f'AES IV = {aes_key}\n')
 
-			#print('encriptando chave...')
 			aes_key_encr = rsa.encrypto(aes_key, pbkey)
 			#print(f'KEY ENCRIPTO = {aes_key_encr}\n')
 			
@@ -405,6 +400,57 @@ class Servidor:
 			time.sleep(0.5)
 		except:
 			print('Erro: não foi possível enviar a mensagem para o destinátario')
+
+	def envia_mensagem_publica_servidor(self, remetente, msg, flag = 0):
+		'''Envia mensagens para todos os clientes, exceto para cliente bloqueado por alguém.
+		flag por default é inicializada em 0 o que significa que é um cliente que quer enviar a mensagem. 
+		Se a flag for 1 significa que é o servidor que está enviando a mensagem'''
+
+		def envia_mensagem_para_todos():
+			#value: (con, pbkey, [bloqueados], [qm_bloqueou]]
+
+			for apelido, value in list(self.clientes.items()):
+				conn, pbkey, bloq, qm_bloq = value
+				#Verifica que o usuario que irá receber a mensagem não é o mesmo que envia a mensagem.
+				#Verifica que não está bloqueado pelo remetente
+				#Verifica se o usuário que irá receber a mensagem não bloqueou o usuário remetente.
+				if apelido != remetente and not apelido in bloqueados and not apelido in list_quem_bloqueou:
+					#try:
+					conn.sendall('/vaichave'.encode('utf-8'))
+					time.sleep(0.5)
+					pbkey = RSA.importKey(pbkey)
+					self.aes = AESciph()
+					msg_encr, aes_key, aes_iv = self.aes.encrypto(msg, self.aes.key, self.aes.iv)					
+					print(f'Mandando mensagem para = {conn}\nCom a chave = {aes_key}\n')
+					aes_key_encr = rsa.encrypto(aes_key, pbkey)
+					aes_iv_encr = rsa.encrypto(aes_iv, pbkey)
+					conn.sendall(msg_encr)
+					time.sleep(0.5)
+					conn.sendall(aes_key_encr)
+					time.sleep(0.5)
+					conn.sendall(aes_iv_encr)
+					time.sleep(0.5)
+					# except:
+					# 	print('Erro: não foi possível enviar a mensagem para o destinátario')
+
+		if not self.clientes: #Servidor vai fechar e não tem ninguém conectado
+			return
+
+		bloqueados = []
+		list_quem_bloqueou = []
+		
+		if flag:
+			if not remetente:
+				envia_mensagem_para_todos()
+				self.encerra_todas_conexoes()
+			else:
+				msg = remetente + ' ' + msg
+		else:
+			msg = '<'+ remetente + '> ' + msg
+			con, pbkey, bloqueados, list_quem_bloqueou = self.clientes.get(remetente)
+
+		envia_mensagem_para_todos()
+	
 
 	def fim_conexao(self, apelido, banido = 0):
 		'''Esse método é chamado internamente pela encerrar conexão de um cliente.'''
@@ -428,7 +474,7 @@ class Servidor:
 			msg = 'foi banido(a) e por isso foi desconectado do bate-papo.'
 		else:
 			msg = 'saiu do bate-papo.'
-		self.envia_mensagem_publica(apelido, msg, 1)
+		self.envia_mensagem_publica_servidor(apelido, msg, 1)
 		con.close()
 
 	def aceita_conexao_clientes(self):

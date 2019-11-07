@@ -39,7 +39,7 @@ class Cliente:
 
 			#print('\nEncriptando mensagem...')
 			self.aes = AESciph()
-			msg_encr, aes_key, aes_iv = self.aes.encrypto(msg)
+			msg_encr, aes_key, aes_iv = self.aes.encrypto(msg, self.aes.key, self.aes.iv)
 			#print(f'MSG ENCRIPTO = {msg_encr}\n')
 			
 			print(f'\nAES KEY = {aes_key}\n')

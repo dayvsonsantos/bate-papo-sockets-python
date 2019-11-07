@@ -16,11 +16,11 @@ class AESciph:
     def get_key(self):
         return self.key
 
-    def encrypto(self, msg):
-        enc_s = AES.new(self.key, AES.MODE_CFB, self.iv)
+    def encrypto(self, msg, key, iv):
+        enc_s = AES.new(key, AES.MODE_CFB, iv)
         cipher_text = enc_s.encrypt(msg)
         encoded_cipher_text = base64.b64encode(cipher_text)
-        return encoded_cipher_text, self.key, self.iv
+        return encoded_cipher_text, key, iv
 
     def decrypto(self, msg_enc, key, iv):
         decryption_suite = AES.new(key, AES.MODE_CFB, iv)
