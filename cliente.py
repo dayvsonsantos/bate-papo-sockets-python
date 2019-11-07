@@ -92,7 +92,7 @@ class Cliente:
 		#print(f'iv recebida encriptografada = {iv}\n')
 
 		key = rsa.decrypto(key).decode('utf-8')
-		#print(f'chave decriptografada = {key}')
+		print(f'chave recebida  decriptografada = {key}')
 
 		iv = rsa.decrypto(iv).decode('utf-8')
 		#print(f'iv decriptografada = {iv}')
