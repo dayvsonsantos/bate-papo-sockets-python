@@ -19,6 +19,7 @@ class Cliente:
 		'''Inicializa as variáveis iniciais do cliente'''
 		self.host = host
 		self.port = port
+		self.aes = AESciph()
 
 	def mostrar_chaves(self):
 		PB_KEY = rsa.get_public_key().exportKey('PEM').decode('utf-8')
@@ -37,8 +38,8 @@ class Cliente:
 			msg = input()
 
 			#print('\nEncriptando mensagem...')
-			aes = AESciph()
-			msg_encr, aes_key, aes_iv = aes.encrypto(msg)
+			self.aes = AESciph()
+			msg_encr, aes_key, aes_iv = self.aes.encrypto(msg)
 			#print(f'MSG ENCRIPTO = {msg_encr}\n')
 			
 			print(f'\nAES KEY = {aes_key}\n')
@@ -97,7 +98,7 @@ class Cliente:
 		iv = rsa.decrypto(iv).decode('utf-8')
 		#print(f'iv decriptografada = {iv}')
 
-		msg = aes.decrypto(msg, key, iv).decode('utf-8')
+		msg = self.aes.decrypto(msg, key, iv).decode('utf-8')
 		print(f'mensagem decriptografada = {msg}\n')
 
 	def recebe_mensagem_do_servidor(self):
@@ -145,11 +146,9 @@ class Cliente:
 		self.s.send(rsa.get_public_key().exportKey('PEM'))
 		# mandando o apelido para o servidor
 		msg = self.s.recv(4096).decode('utf-8')
+		self.mostrar_chaves()
 		apelido = input("Apelido: ")	
 		self.s.sendall(apelido.encode('utf-8'))
-		time.sleep(0.5)
-		self.mostrar_chaves()
-		time.sleep(0.5)
 		thread = threading.Thread(target = self.recebe_mensagem_do_servidor)
 		thread.start()
 		self.envia_mensagem(self.SERVIDOR_KEY)

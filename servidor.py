@@ -10,7 +10,6 @@ from cryptography import AESciph
 from cryptography import RSA
 
 rsa = RSAciph()
-aes = AESciph()
 
 class Servidor:
 	'''Serve como servidor de um bate papo. Essa classe é responsável por gerenciar as mensagens que chegam dos clientes
@@ -27,6 +26,7 @@ class Servidor:
 		 '/lista_bloqueados', 'bloquear', '/bloquear', 'desbloquear', '/desbloquear',
 		  'SERVIDOR_OFF', '/SERVIDOR_OFF', 'BANIDO', '/BANIDO']
 		self.clientes = {} #key: apelido. Value: (con, key, [bloqueados], [quem_me_bloqueou])
+		self.aes = AESciph()
 
 	def main(self):
 		'''Começa a execução do servidor, aqui as threads são inicializadas e enviadas aos respectivos métodos'''
@@ -257,7 +257,9 @@ class Servidor:
 				iv = rsa.decrypto(iv).decode('utf-8')
 				#print(f'iv decriptografada = {iv}')
 
-				msg = aes.decrypto(msg, key, iv).decode('utf-8')
+				print(f'Recebendo mensagem de = {con}\nCom a chave = {key}\n\n')
+
+				msg = self.aes.decrypto(msg, key, iv).decode('utf-8')
 				#print(f'mensagem decriptografada = {msg}')
 
 				self.comando_msg(apelido, msg)
@@ -375,7 +377,10 @@ class Servidor:
 			pbkey = RSA.importKey(pbkey)
 
 			#print('\nEncriptando mensagem...')
-			msg_encr, aes_key, aes_iv = aes.encrypto(msg)
+			self.aes = AESciph()
+			msg_encr, aes_key, aes_iv = self.aes.encrypto(msg)
+			
+			print(f'Mandando mensagem para = {con}\nCom a chave = {aes_key}\n')
 			#print(f'MSG ENCRIPTO = {msg_encr}\n')
 			
 			#print(f'AES KEY = {aes_key}')
