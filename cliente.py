@@ -15,7 +15,7 @@ rsa = RSAciph()
 class Cliente:
 	'''Usuário do bate-papo'''
 
-	def __init__(self, host = '127.0.0.1', port = 9999):
+	def __init__(self, host = '192.168.0.126', port = 9999):
 		'''Inicializa as variáveis iniciais do cliente'''
 		self.host = host
 		self.port = port
@@ -98,6 +98,7 @@ class Cliente:
 		iv = rsa.decrypto(iv).decode('utf-8')
 		#print(f'iv decriptografada = {iv}')
 
+		print(msg)
 		msg = self.aes.decrypto(msg, key, iv).decode('utf-8')
 		print(f'mensagem decriptografada = {msg}\n')
 
