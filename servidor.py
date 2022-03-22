@@ -15,7 +15,7 @@ class Servidor:
 	'''Serve como servidor de um bate papo. Essa classe é responsável por gerenciar as mensagens que chegam dos clientes
 	e envia-la a outros clientes.'''
 
-	def __init__(self, host = '', port = 9999):
+	def __init__(self, host = '127.0.0.1', port = 9999):
 		'''Inicializa as variáveis iniciais do servidor'''
 
 		self.finaliza = '/SERVIDOR_OFF'

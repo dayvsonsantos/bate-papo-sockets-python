@@ -10,20 +10,33 @@ import random, string, base64
 
 class AESciph:
     def __init__(self):
+        self.block_size = AES.block_size
         self.key = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(32))
         self.iv = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for x in range(16))
 
     def get_key(self):
         return self.key
 
+    def __pad(self, plainText):
+        numberOfBytes = self.block_size - len(plainText) % self.block_size
+        extraString = chr(numberOfBytes) * numberOfBytes
+        paddedText = plainText + extraString
+        return paddedText.encode('utf-8')
+
+    def __unpad(self, plainText):
+        lastChar = plainText[len(plainText) - 1:]
+        remove = ord(lastChar)
+        return plainText[:-remove]
+
     def encrypto(self, msg, key, iv):
-        enc_s = AES.new(key, AES.MODE_CFB, iv)
-        cipher_text = enc_s.encrypt(msg)
+        enc_s = AES.new(key.encode("utf-8"), AES.MODE_CFB, iv.encode("utf-8"))
+        print(f"Message = {msg}")
+        cipher_text = enc_s.encrypt(self.__pad(msg))
         encoded_cipher_text = base64.b64encode(cipher_text)
         return encoded_cipher_text, key, iv
 
     def decrypto(self, msg_enc, key, iv):
-        decryption_suite = AES.new(key, AES.MODE_CFB, iv)
+        decryption_suite = AES.new(key.encode("utf-8"), AES.MODE_CFB, iv.encode("utf-8"))
         plain_text = decryption_suite.decrypt(base64.b64decode(msg_enc))
         return plain_text
 
